@@ -1,0 +1,10 @@
+add_newline = true
+
+[directory]
+truncation_length = 3
+
+[git_branch]
+symbol = " "
+
+[python]
+symbol = " "
