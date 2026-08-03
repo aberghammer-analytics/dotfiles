@@ -25,3 +25,6 @@ alias reload="source $ZDOTDIR/.zshrc"
 alias cz="chezmoi"
 alias cze="chezmoi edit"
 alias czd="chezmoi diff"
+
+# other 
+alias show-keys="glow $HOME/.config/keys.md"

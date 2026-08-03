@@ -1,0 +1,48 @@
+# ~/.config/zsh/.zshrc — lean, no framework
+
+# ── history ──────────────────────────────────────────────
+HISTFILE="$ZDOTDIR/.zsh_history"
+HISTSIZE=50000
+SAVEHIST=50000
+setopt SHARE_HISTORY          # share across tmux panes
+setopt HIST_IGNORE_ALL_DUPS   # no duplicate entries
+setopt HIST_IGNORE_SPACE      # ' cmd' stays out of history
+setopt HIST_REDUCE_BLANKS
+
+# ── options ──────────────────────────────────────────────
+setopt AUTO_CD                # type a dir name to cd into it
+setopt INTERACTIVE_COMMENTS   # allow # comments at the prompt
+setopt NO_BEEP
+
+# ── completions ──────────────────────────────────────────
+autoload -Uz compinit && compinit
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'   # case-insensitive
+zstyle ':completion:*' menu select                        # arrow-key menu
+
+# ── keybindings ──────────────────────────────────────────
+bindkey -e                    # emacs-style (default; explicit is better)
+bindkey '^[[A' history-search-backward   # up arrow: search history by prefix
+bindkey '^[[B' history-search-forward
+
+# ── my config ────────────────────────────────────────────
+for f in "$ZDOTDIR"/{env,aliases,functions}.zsh; do
+  [[ -r "$f" ]] && source "$f"
+done
+
+# ── plugins (brew-installed, sourced directly) ──────────
+source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh" 2>/dev/null
+source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" 2>/dev/null
+# note: syntax-highlighting must be sourced LAST of the plugins
+
+# ── prompt ───────────────────────────────────────────────
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh)"
+
+. "$HOME/.atuin/bin/env"
+
+eval "$(atuin init zsh)"
+
+# -- tree setup 
+tree() {
+  eza --tree --git-ignore "$@"
+}
