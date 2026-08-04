@@ -5,7 +5,60 @@ config = wezterm.config_builder()
 -- keys
 local act = wezterm.action
 
+-- Catppuccin Mocha accents
+local choices = {
+	{ id = "#f38ba8", label = "Red" },
+	{ id = "#fab387", label = "Peach" },
+	{ id = "#f9e2af", label = "Yellow" },
+	{ id = "#a6e3a1", label = "Green" },
+	{ id = "#74c7ec", label = "Sapphire" },
+	{ id = "#cba6f7", label = "Mauve" },
+	{ id = "clear", label = "Clear" },
+}
+
+local function set_tab_color(tab_id, color)
+	local t = wezterm.GLOBAL.tab_colors or {}
+	t[tostring(tab_id)] = color
+	wezterm.GLOBAL.tab_colors = t -- reassign; in-place nested mutation doesn't stick
+end
+
+wezterm.on("format-tab-title", function(tab, tabs, panes, cfg, hover, max_width)
+	local title = tab.tab_title
+	if not title or #title == 0 then
+		title = tab.active_pane.title
+	end
+	title = " " .. (tab.tab_index + 1) .. ": " .. title .. " "
+
+	local bg = (wezterm.GLOBAL.tab_colors or {})[tostring(tab.tab_id)]
+	if not bg then
+		return title
+	end
+
+	return {
+		{ Background = { Color = bg } },
+		{ Foreground = { Color = "#1e1e2e" } },
+		{ Attribute = { Intensity = tab.is_active and "Bold" or "Normal" } },
+		{ Text = title },
+	}
+end)
+
 config.keys = {
+	-- cmd+shift+k -> pick a color for the current tab
+	{
+		key = "k",
+		mods = "SHIFT|CMD",
+		action = act.InputSelector({
+			title = "Tab color",
+			choices = choices,
+			action = wezterm.action_callback(function(window, pane, id, label)
+				if not id then
+					return
+				end
+				set_tab_color(window:active_tab():tab_id(), id ~= "clear" and id or nil)
+			end),
+		}),
+	},
+
 	-- rename tab
 	{
 		key = "e",
@@ -21,6 +74,16 @@ config.keys = {
 		}),
 	},
 	-- hide other apps (Cmd+Opt+H, mac only)
+	{ key = "[", mods = "CMD", action = act.ActivatePaneDirection("Prev") },
+	{ key = "]", mods = "CMD", action = act.ActivatePaneDirection("Next") },
+
+	-- tabs (iTerm2: cmd+shift+[ / cmd+shift+])
+	{ key = "{", mods = "SHIFT|CMD", action = act.ActivateTabRelative(-1) },
+	{ key = "}", mods = "SHIFT|CMD", action = act.ActivateTabRelative(1) },
+	{ key = "d", mods = "CMD", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+	{ key = "d", mods = "SHIFT|CMD", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+	{ key = "w", mods = "CMD", action = act.CloseCurrentPane({ confirm = true }) },
+	{ key = "w", mods = "SHIFT|CMD", action = act.CloseCurrentTab({ confirm = true }) },
 	{
 		key = "h",
 		mods = "CMD|OPT",
