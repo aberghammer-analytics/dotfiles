@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# wf-review — cross-model review of a diff range. Exit 0 = pass, 1 = fail.
+# Consumed two ways: as a checkpoint verify command (cruise), and by the /review
+# skill (driver / pre-PR). The reviewer must be a DIFFERENT vendor than the builder.
+#
+#   wf-review                    review diff since last wf checkpoint commit (or merge-base)
+#   wf-review --since <ref>      review diff from <ref> to HEAD
+#   wf-review --dry-run          print the prompt, invoke nothing
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REVIEWS=".claude/reviews"
+MAX_DIFF_LINES="${WF_REVIEW_MAX_DIFF_LINES:-4000}"
+
+# Reviewer invocation is config. Default codex; anything that reads a prompt on
+# stdin and prints the review on stdout works.
+WF_REVIEW_BIN="${WF_REVIEW_BIN:-codex exec}"
+
+# Prompt template: project override wins, global template is fallback.
+TEMPLATE=".claude/review-prompt.md"
+[[ -f "$TEMPLATE" ]] || TEMPLATE="$HERE/../templates/review-prompt.md"
+
+# --- resolve diff range ------------------------------------------------------
+SINCE=""
+DRY_RUN=false
+while [[ $# -gt 0 ]]; do case "$1" in
+  --since) SINCE="$2"; shift 2 ;;
+  --dry-run) DRY_RUN=true; shift ;;
+  *) echo "wf-review: unknown arg $1"; exit 2 ;;
+esac; done
+
+if [[ -z "$SINCE" ]]; then
+  # last checkpoint commit made by the loop, else merge-base with main
+  SINCE="$(git log --grep='^wf: checkpoint' --format=%H -1 2>/dev/null || true)"
+  [[ -n "$SINCE" ]] || SINCE="$(git merge-base HEAD main 2>/dev/null || git rev-list --max-parents=0 HEAD)"
+fi
+
+diff_stat="$(git diff --stat "$SINCE"..HEAD)"
+diff_body="$(git diff "$SINCE"..HEAD)"
+diff_lines="$(wc -l <<< "$diff_body")"
+if (( diff_lines > MAX_DIFF_LINES )); then
+  echo "wf-review: diff is $diff_lines lines (cap $MAX_DIFF_LINES). Reviewing stat + truncated diff." >&2
+  diff_body="$(head -n "$MAX_DIFF_LINES" <<< "$diff_body")
+[diff truncated at $MAX_DIFF_LINES lines — review the stat for full scope]"
+fi
+
+# slice plan for context, if present (newest)
+plan="$(ls -t docs/plans/*.md 2>/dev/null | head -1 || true)"
+plan_body=""; [[ -n "$plan" ]] && plan_body="$(cat "$plan")"
+
+prompt="$(sed -e "s|{{RANGE}}|$SINCE..HEAD|g" "$TEMPLATE")
+=== APPROVED SLICE PLAN ===
+${plan_body:-<none found>}
+
+=== DIFF STAT ===
+$diff_stat
+
+=== DIFF ===
+$diff_body"
+
+$DRY_RUN && { echo "$prompt"; exit 0; }
+
+# --- run reviewer ------------------------------------------------------------
+mkdir -p "$REVIEWS"
+out="$REVIEWS/$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD).md"
+review="$($WF_REVIEW_BIN <<< "$prompt")" || { echo "wf-review: reviewer invocation failed" >&2; exit 2; }
+printf '%s\n' "$review" > "$out"
+echo "wf-review: review written to $out"
+
+# --- parse verdict -----------------------------------------------------------
+verdict="$(grep -Eo '^VERDICT: (PASS|FAIL)' <<< "$review" | tail -1 || true)"
+case "$verdict" in
+  "VERDICT: PASS") echo "wf-review: PASS"; exit 0 ;;
+  "VERDICT: FAIL") echo "wf-review: FAIL — see $out"; exit 1 ;;
+  *) echo "wf-review: no parseable verdict in review output — treating as FAIL (see $out)"; exit 1 ;;
+esac

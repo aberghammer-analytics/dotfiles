@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# wf-next — print the dispatchable set: "id<TAB>type<TAB>file", blockers done,
+# excluding tickets whose files footprint overlaps any in-flight worker's.
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/wf-env"
+excl="$(wf_running_footprints)"
+if [[ -n "$excl" ]]; then
+  python3 "$WF_LIB" ready-set --exclude-files "$excl"
+else
+  python3 "$WF_LIB" ready-set
+fi

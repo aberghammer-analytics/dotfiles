@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# wf-wait — block until the run needs attention; print ONE reason line and exit.
+#   ticket-exit <id>        a worker process finished (pass/fail unknown — collect it)
+#   stalled <id>            a worker's log hasn't grown in WF_STALL_SECS
+#   checkpoint-ready <id>   nothing running and the next ready item is a checkpoint
+#   dispatch-ready          nothing running; ready tasks exist — spawn them
+#   blocked                 nothing running, nothing ready, not all done (parked deps)
+#   run-done                every issue is done
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/wf-env"
+
+while true; do
+  # 1. finished or stalled workers
+  for j in "$WF_RUNNING"/*.json; do
+    [[ -e "$j" ]] || continue
+    id="$(python3 -c "import json;print(json.load(open('$j'))['id'])")"
+    pid="$(python3 -c "import json;print(json.load(open('$j'))['pid'])")"
+    log="$(python3 -c "import json;print(json.load(open('$j'))['log'])")"
+    if ! kill -0 "$pid" 2>/dev/null; then echo "ticket-exit $id"; exit 0; fi
+    if [[ -f "$log" ]]; then
+      age=$(( $(date +%s) - $(stat -c %Y "$log" 2>/dev/null || stat -f %m "$log") ))
+      (( age > WF_STALL_SECS )) && { echo "stalled $id"; exit 0; }
+    fi
+  done
+  # 2. nothing running → consult the DAG
+  if ! ls "$WF_RUNNING"/*.json >/dev/null 2>&1; then
+    python3 "$WF_LIB" all-done && { echo "run-done"; exit 0; }
+    next="$("$WF_HERE/wf-next" | head -1 || true)"
+    if [[ -z "$next" ]]; then echo "blocked"; exit 0; fi
+    typ="$(cut -f2 <<< "$next")"; id="$(cut -f1 <<< "$next")"
+    [[ "$typ" == "checkpoint" ]] && { echo "checkpoint-ready $id"; exit 0; }
+    echo "dispatch-ready"; exit 0
+  fi
+  sleep 5
+done
