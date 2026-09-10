@@ -115,7 +115,7 @@ config.window_padding = {
 	top = 12,
 	bottom = 8,
 }
-config.hide_tab_bar_if_only_one_tab = true
+config.hide_tab_bar_if_only_one_tab = false
 config.use_fancy_tab_bar = false -- flat tab bar when tabs exist
 
 -- subtle transparency + blur (delete these 2 lines for solid black)

@@ -28,3 +28,13 @@ alias czd="chezmoi diff"
 
 # other 
 alias show-keys="glow $HOME/.config/keys.md"
+
+# yazi
+function y() {
+  local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+  YAZI_LAUNCH_DIR="$PWD" yazi "$@" --cwd-file="$tmp"
+  yazi "$@" --cwd-file="$tmp"
+  IFS= read -r -d '' cwd < "$tmp"
+  [ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
+  rm -f -- "$tmp"
+}

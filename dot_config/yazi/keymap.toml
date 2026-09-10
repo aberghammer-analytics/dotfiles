@@ -1,0 +1,4 @@
+[[mgr.prepend_keymap]]
+on = ["c", "r"]
+run = '''shell --block -- for f in "$@"; do python3 -c 'import os,sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))' "$f" "${YAZI_LAUNCH_DIR:-$PWD}"; done | pbcopy'''
+desc = "Copy path relative to launch dir"

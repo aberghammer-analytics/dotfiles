@@ -4,31 +4,45 @@ These are common instructions across all scenarios.
 
 ## General Guidelines
 
-- Never use the em dash "—". Use plain dash "-" instead
-- When writing commit messages, NEVER auto-add your agent name as co-author
-- Never manually modify CHANGELOG.md files or any files that are marked as auto-generated. Instead, prefer quality, simplicity, robustness, scalability, and long term maintainability.
-- When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible. This makes sure you find the real problem so your fix will actually solve it.
-- Prioritize concision over grammar. Use quick bullet points over paragraphs where possible.
-- Say what you did not do, and what you are unsure about. Confidence you have not earned is worse than an open question.
-- Never add yourself as commit author, co-author, or trailer.
-- Never hand-edit generated files. This includes CHANGELOG.md, lockfiles, and anything carrying a generated header or a hash stamp.
-- When making technical decisions, do not give much weight to development cost. Instead prefer quality, simplicity, robustness, scalability, and long term maintainability
+- Never use the em dash. Use a plain dash "-" instead
+- Never add yourself as commit author, co-author, or trailer
+- Never hand-edit generated files. This includes CHANGELOG.md, lockfiles, and anything carrying a generated header or a hash stamp
+- When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible. This makes sure you find the real problem so your fix will actually solve it
+- Prioritize concision over grammar. Use quick bullet points over paragraphs where possible
+- Say what you did not do, and what you are unsure about. Confidence you have not earned is worse than an open question
+- Prefer simplicity and readability. Robustness, scalability, and defensive code are earned by the project's stage (see below), not defaults. When in doubt, write less and say what you left out
 
-## Language rules
+## Session setup
 
-At the start of a session, read the idioms file for the language you are working in:
+At the start of a session, read two files once. Not per file, not per task.
+
+### Stage
+
+The project's CLAUDE.md or AGENTS.md declares a stage on one line, e.g. `Stage: solo`. Read the matching guide:
+
+- solo: ~/.config/agents/stages/solo.md
+- shared: ~/.config/agents/stages/shared.md
+- production: ~/.config/agents/stages/production.md
+
+If no stage is declared, assume solo and say so in your first response.
+
+The stage guide owns the tradeoff between speed and defensiveness: error handling, validation depth, compat shims, retries, plumbing size. Nothing in this file overrides it.
+
+### Language
+
+Read the idioms file for the language you are working in:
 
 - Python: ~/.config/agents/languages/python/IDIOMS.md
 - TypeScript: ~/.config/agents/languages/typescript/IDIOMS.md
 - Rust: ~/.config/agents/languages/rust/IDIOMS.md
 
-Read it once per session, not per file. If the project's own AGENTS.md contradicts it, the project wins.
+### Precedence
+
+Project CLAUDE.md/AGENTS.md > stage guide > language idioms > this file. If two disagree, the more specific one wins.
 
 ## Every project
 
-- A justfile at root with at least `just setup`, `just check`, `just test`. Agents and CI never use raw tool commands
 - docker compose for local service dependencies (database, cache, queue). Never install those on the host
-- Secrets in `.env`, never committed. `.env.example` committedd
+- Secrets in `.env`, never committed. `.env.example` committed
 - Lockfiles committed
-- CI runs `just check` and `just test` on every pull request
-- use a `config.toml` in the project root for parameters that can be easily changed and tested
+- A `config.toml` in the project root for parameters that can be easily changed and tested

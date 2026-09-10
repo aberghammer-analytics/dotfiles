@@ -18,3 +18,5 @@ export PATH="$HOME/.bun/bin:$PATH"
 # antigravity
 export PATH="$HOME/.antigravity/antigravity/bin:$PATH"
 
+# LM Studio
+export PATH="$HOME/.lmstudio/bin:$PATH"
