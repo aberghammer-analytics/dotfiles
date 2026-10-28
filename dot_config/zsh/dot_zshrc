@@ -1,7 +1,8 @@
 # ~/.config/zsh/.zshrc — lean, no framework
 
 # ── history ──────────────────────────────────────────────
-HISTFILE="$ZDOTDIR/.zsh_history"
+HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
+[[ -d ${HISTFILE:h} ]] || mkdir -p ${HISTFILE:h}
 HISTSIZE=50000
 SAVEHIST=50000
 setopt SHARE_HISTORY          # share across tmux panes
@@ -15,7 +16,9 @@ setopt INTERACTIVE_COMMENTS   # allow # comments at the prompt
 setopt NO_BEEP
 
 # ── completions ──────────────────────────────────────────
-autoload -Uz compinit && compinit
+ZCOMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-$ZSH_VERSION"
+[[ -d ${ZCOMPDUMP:h} ]] || mkdir -p ${ZCOMPDUMP:h}
+autoload -Uz compinit && compinit -d "$ZCOMPDUMP"
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'   # case-insensitive
 zstyle ':completion:*' menu select                        # arrow-key menu
 
